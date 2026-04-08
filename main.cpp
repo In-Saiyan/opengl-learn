@@ -63,6 +63,59 @@ void processInput(GLFWwindow *window) {
     glfwSetWindowShouldClose(window, true);
 }
 
+class TriangleMesh {
+  private:
+    unsigned int VAO, VBO;
+  public:
+    TriangleMesh (const float* vertices, size_t size) {
+      // VBO(Vertex Buffer Object) is like an object that holds data
+      // VAO(Vertex Array Object) is the rule manual that tells GPU how to read the VBO
+      glGenVertexArrays(1, &VAO);
+      glGenBuffers(1, &VBO);
+
+      glBindVertexArray(VAO); // Bind the VAO first - telling OpenGL start recording the setup instructions...
+
+
+      // Bind the VBO and push the vertex data onto GPU vram
+      glBindBuffer(GL_ARRAY_BUFFER, VBO);
+      glBufferData(GL_ARRAY_BUFFER, size, vertices, GL_STATIC_DRAW);
+
+      // Tell GPU the method to read the raw data 
+      // 0 : index (can be linked to a shader)
+      // 3: size of each vertex 
+      // GL_FLOAT: 32-bit floats 
+      // 3 * sizeof(float): "stride" - how much space is between the start of one vertex and the start of the next...
+      // (void*) 0: the offset of the buffer data (currently we are at the start)
+
+      // Position attribute (Location 0)
+      // Stride is now 6 floats. Offset is 0.
+      glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+      glEnableVertexAttribArray(0);
+
+      // Color attribute (Location 1)
+      // Stride is 6 floats. Offset is 3 floats (we skip the first 3 XYZ floats to get to RGB)
+      glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+      glEnableVertexAttribArray(1);
+      glBindVertexArray(0);
+
+    }
+
+    ~TriangleMesh () {
+      glDeleteVertexArrays(1, &VAO);
+      glDeleteBuffers(1, &VBO);
+      LOG(LOG_LEVEL::DEBUG, current_time(), "Triangle Mesh Freed");
+    }
+
+    TriangleMesh(const TriangleMesh&) = delete;
+    TriangleMesh& operator=(const TriangleMesh&) = delete;
+
+    void draw () const {
+      // Bind our VAO (the instruction manual for our triangle)
+      glBindVertexArray(VAO);
+      glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+};
+
 class Shader {
   private: 
     unsigned int shaderProgram;
@@ -160,42 +213,12 @@ int main () {
 
   glViewport(0, 0, 800, 600); // Set viewport in that window, first two: offset + other two: dimensions
 
-  // VBO(Vertex Buffer Object) is like an object that holds data
-  // VAO(Vertex Array Object) is the rule manual that tells GPU how to read the VBO
-  unsigned int VBO, VAO; // IDs for objects below
-  glGenVertexArrays(1, &VAO);
-  glGenBuffers(1, &VBO);
-
-  glBindVertexArray(VAO); // Bind the VAO first - telling OpenGL start recording the setup instructions...
-
   float vertices[] = { 
     // Positions         // Colors (R, G, B)
     -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  // Bottom Left (Red)
     0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // Bottom Right (Green)
     0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // Top (Blue)
   };
-
-  // Bind the VBO and push the vertex data onto GPU vram
-  glBindBuffer(GL_ARRAY_BUFFER, VBO);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-  // Tell GPU the method to read the raw data 
-  // 0 : index (can be linked to a shader)
-  // 3: size of each vertex 
-  // GL_FLOAT: 32-bit floats 
-  // 3 * sizeof(float): "stride" - how much space is between the start of one vertex and the start of the next...
-  // (void*) 0: the offset of the buffer data (currently we are at the start)
-
-  // Position attribute (Location 0)
-  // Stride is now 6 floats. Offset is 0.
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-  glEnableVertexAttribArray(0);
-
-  // Color attribute (Location 1)
-  // Stride is 6 floats. Offset is 3 floats (we skip the first 3 XYZ floats to get to RGB)
-  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-  glEnableVertexAttribArray(1);
-  glBindVertexArray(0);
 
   // Graphics Pipeline (Shaders)
   // 1. Vertex Shaders: Handles the Positioning of the vertex 
@@ -218,38 +241,8 @@ int main () {
                                  FragColor = vec4(ourColor, 1.0f);\n\
                                }\n\0";
 
-  // unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  // glShaderSource(vertexShader, 1, &vertexShaderSrc, NULL);
-  // glCompileShader(vertexShader);
-  //
-  // int success;
-  // char infoLog[512];
-  //
-  // glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-  //
-  // if (!success) {
-  //   glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-  //   LOG(LOG_LEVEL::ERROR, current_time(), string("Vertex Shader Compilation Failed: ") + infoLog);
-  // }
-  //
-  // LOG(LOG_LEVEL::INFO, current_time(), "Compiled Vertex Shaders");
-  //
-  // unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  // glShaderSource(fragmentShader, 1, &fragShaderSrc, NULL);
-  // glCompileShader(fragmentShader);
-  //
-  // glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-  // if(!success) {
-  //   glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-  //   LOG(LOG_LEVEL::ERROR, current_time(), string("Failed to compile Fragment Shader: ") + infoLog);
-  // }
-  //
-  // LOG(LOG_LEVEL::INFO, current_time(), "Fragment Shader Successfully Compiled");
-
-  unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
   Shader shader(vertexShaderSrc, fragShaderSrc);
+  TriangleMesh triangle_mesh(vertices, sizeof(vertices));
 
   LOG(LOG_LEVEL::INFO, current_time(), "Shaders successfully attached");
 
@@ -260,10 +253,9 @@ int main () {
 
     // Activate our shader program
     shader.activate();
-    // Bind our VAO (the instruction manual for our triangle)
-    glBindVertexArray(VAO);
-    // DRAW!
-    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    // Draw the Mesh
+    triangle_mesh.draw();
 
     glfwSwapBuffers(window); // Swap front(on screen) and back buffers since its better than drawing inplace which can cause visual artifacts and make up for a significantly worse experience.
     glfwPollEvents(); // Polls for events like input(from mouse, keyboard etc...)
