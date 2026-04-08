@@ -92,15 +92,114 @@ int main () {
   LOG(LOG_LEVEL::INFO, current_time(), "GLAD started");
 
   glViewport(0, 0, 800, 600); // Set viewport in that window, first two: offset + other two: dimensions
+  
+  // VBO(Vertex Buffer Object) is like an object that holds data
+  // VAO(Vertex Array Object) is the rule manual that tells GPU how to read the VBO
+  unsigned int VBO, VAO; // IDs for objects below
+  glGenVertexArrays(1, &VAO);
+  glGenBuffers(1, &VBO);
 
+  glBindVertexArray(VAO); // Bind the VAO first - telling OpenGL start recording the setup instructions...
+  
+  float vertices[] = { // Out tirangal
+    -0.5f, -0.5f, 0.0f, // left  
+    0.5f, -0.5f, 0.0f, // right 
+    0.0f,  0.5f, 0.0f  // top   
+  };
+
+  // Bind the VBO and push the vertex data onto GPU vram
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+  // Tell GPU the method to read the raw data 
+  // 0 : index (can be linked to a shader)
+  // 3: size of each vertex 
+  // GL_FLOAT: 32-bit floats 
+  // 3 * sizeof(float): "stride" - how much space is between the start of one vertex and the start of the next...
+  // (void*) 0: the offset of the buffer data (currently we are at the start)
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*) 0);
+  glEnableVertexAttribArray(0);
+  glBindVertexArray(0);
+
+  // Graphics Pipeline (Shaders)
+  // 1. Vertex Shaders: Handles the Positioning of the vertex 
+  // 2. Fragment Shaders: Handles the pixel clolors (calcs the "fragments")
+  const char *vertexShaderSrc = "#version 330 core\n\
+                                 layout (location = 0) in vec3 aPos; \n\
+                                 void main()\n\
+                                 {\n\
+                                   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n\
+                                 }\n\0";  
+
+  const char *fragShaderSrc = "#version 330 core\n\
+                               out vec4 FragColor;\n\
+                               void main()\n\
+                               {\n\
+                                 FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n\
+                               }\n\0";
+
+  unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+  glShaderSource(vertexShader, 1, &vertexShaderSrc, NULL);
+  glCompileShader(vertexShader);
+
+  int success;
+  char infoLog[512];
+
+  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+
+  if (!success) {
+    glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+    LOG(LOG_LEVEL::ERROR, current_time(), string("Vertex Shader Compilation Failed: ") + infoLog);
+  }
+
+  LOG(LOG_LEVEL::INFO, current_time(), "Compiled Vertex Shaders");
+
+  unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+  glShaderSource(fragmentShader, 1, &fragShaderSrc, NULL);
+  glCompileShader(fragmentShader);
+
+  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+  if(!success) {
+    glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+    LOG(LOG_LEVEL::ERROR, current_time(), string("Failed to compile Fragment Shader: ") + infoLog);
+  }
+
+  LOG(LOG_LEVEL::INFO, current_time(), "Fragment Shader Successfully Compiled");
+
+  unsigned int shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, vertexShader);
+  glAttachShader(shaderProgram, fragmentShader);
+  glLinkProgram(shaderProgram);
+
+  // Check for linking errors
+  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+  if (!success) {
+    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+    LOG(LOG_LEVEL::ERROR, current_time(), string("Shader Linking Failed: ") + infoLog);
+  }
+
+  // Clean up the individual shader objects (we don't need them once linked)
+  glDeleteShader(vertexShader);
+  glDeleteShader(fragmentShader);
+
+  LOG(LOG_LEVEL::INFO, current_time(), "Shaders successfully attached");
 
   while(!glfwWindowShouldClose(window)) { // While the OS doesn't signals to close the window this is essentially just a while(true) loop
     processInput(window);
     glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Wipe out the color
     glClear(GL_COLOR_BUFFER_BIT); // Only clear the color? Need some clarification.
+
+    // Activate our shader program
+    glUseProgram(shaderProgram);
+    // Bind our VAO (the instruction manual for our triangle)
+    glBindVertexArray(VAO);
+    // DRAW!
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
     glfwSwapBuffers(window); // Swap front(on screen) and back buffers since its better than drawing inplace which can cause visual artifacts and make up for a significantly worse experience.
     glfwPollEvents(); // Polls for events like input(from mouse, keyboard etc...)
   }
+
 
   return 0;
 }
