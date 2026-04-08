@@ -32,6 +32,7 @@ enum class LOG_LEVEL{
   NOTE,
 };
 
+// Syntactic Sugar ahh
 std::string_view to_string(LOG_LEVEL level) {
   switch (level) {
     case LOG_LEVEL::INFO:       return "INFO";
@@ -69,18 +70,19 @@ int main () {
     LOG(LOG_LEVEL::ERROR, current_time(), "COULD NOT INITIALIZE GLFW");
   }
 
+  // Set OpenGL versions(3.3 in this case)
   glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
   glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
   glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-  GLFWwindow *window = glfwCreateWindow(800, 600, "Test Title", NULL, NULL);
+  GLFWwindow *window = glfwCreateWindow(800, 600, "Test Title", NULL, NULL); // Create Window
   if (window == NULL) {
     LOG(LOG_LEVEL::ERROR, current_time(), "Failed to create a window");
     glfwTerminate();
     return -1;
   }
 
-  glfwMakeContextCurrent(window);
+  glfwMakeContextCurrent(window); // Apply OpenGL commands from this program to this window specifically
 
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     LOG(LOG_LEVEL::ERROR, current_time(), "Failed to create GLAD process");
@@ -89,15 +91,15 @@ int main () {
 
   LOG(LOG_LEVEL::INFO, current_time(), "GLAD started");
 
-  glViewport(0, 0, 800, 600);
+  glViewport(0, 0, 800, 600); // Set viewport in that window, first two: offset + other two: dimensions
 
 
-  while(!glfwWindowShouldClose(window)) {
+  while(!glfwWindowShouldClose(window)) { // While the OS doesn't signals to close the window this is essentially just a while(true) loop
     processInput(window);
-    glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glfwSwapBuffers(window);
-    glfwPollEvents();
+    glClearColor(0.2f, 0.3f, 0.3f, 1.0f); // Wipe out the color
+    glClear(GL_COLOR_BUFFER_BIT); // Only clear the color? Need some clarification.
+    glfwSwapBuffers(window); // Swap front(on screen) and back buffers since its better than drawing inplace which can cause visual artifacts and make up for a significantly worse experience.
+    glfwPollEvents(); // Polls for events like input(from mouse, keyboard etc...)
   }
 
   return 0;
