@@ -101,10 +101,11 @@ int main () {
 
   glBindVertexArray(VAO); // Bind the VAO first - telling OpenGL start recording the setup instructions...
   
-  float vertices[] = { // Out tirangal
-    -0.5f, -0.5f, 0.0f, // left  
-    0.5f, -0.5f, 0.0f, // right 
-    0.0f,  0.5f, 0.0f  // top   
+  float vertices[] = { 
+    // Positions         // Colors (R, G, B)
+    -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  // Bottom Left (Red)
+     0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // Bottom Right (Green)
+     0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // Top (Blue)
   };
 
   // Bind the VBO and push the vertex data onto GPU vram
@@ -117,8 +118,16 @@ int main () {
   // GL_FLOAT: 32-bit floats 
   // 3 * sizeof(float): "stride" - how much space is between the start of one vertex and the start of the next...
   // (void*) 0: the offset of the buffer data (currently we are at the start)
-  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*) 0);
+
+  // Position attribute (Location 0)
+  // Stride is now 6 floats. Offset is 0.
+  glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
   glEnableVertexAttribArray(0);
+
+  // Color attribute (Location 1)
+  // Stride is 6 floats. Offset is 3 floats (we skip the first 3 XYZ floats to get to RGB)
+  glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+  glEnableVertexAttribArray(1);
   glBindVertexArray(0);
 
   // Graphics Pipeline (Shaders)
@@ -126,16 +135,20 @@ int main () {
   // 2. Fragment Shaders: Handles the pixel clolors (calcs the "fragments")
   const char *vertexShaderSrc = "#version 330 core\n\
                                  layout (location = 0) in vec3 aPos; \n\
+                                 layout (location = 1) in vec3 aColor; \n\
+                                 out vec3 ourColor; \n\
                                  void main()\n\
                                  {\n\
-                                   gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n\
-                                 }\n\0";  
+                                   gl_Position = vec4(aPos, 1.0);\n\
+                                     ourColor = aColor; \n\
+                                 }\n\0";
 
   const char *fragShaderSrc = "#version 330 core\n\
                                out vec4 FragColor;\n\
+                               in vec3 ourColor;\n\
                                void main()\n\
                                {\n\
-                                 FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n\
+                                 FragColor = vec4(ourColor, 1.0f);\n\
                                }\n\0";
 
   unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
