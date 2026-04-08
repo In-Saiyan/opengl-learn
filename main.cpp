@@ -8,6 +8,7 @@
 // Too lazy to type these again and again? Add here :)
 using string = std::string;
 using LocalTime = std::chrono::local_time<std::chrono::system_clock::duration>;
+#define LOGNOW(level, msg) LOG(level, current_time(), msg)
 
 /*
  * Environment ENUM 
@@ -103,7 +104,7 @@ class TriangleMesh {
     ~TriangleMesh () {
       glDeleteVertexArrays(1, &VAO);
       glDeleteBuffers(1, &VBO);
-      LOG(LOG_LEVEL::DEBUG, current_time(), "Triangle Mesh Freed");
+      LOGNOW(LOG_LEVEL::DEBUG, "Triangle Mesh Freed");
     }
 
     TriangleMesh(const TriangleMesh&) = delete;
@@ -133,10 +134,10 @@ class Shader {
 
       if (!success) {
         glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-        LOG(LOG_LEVEL::ERROR, current_time(), string("Vertex Shader Compilation Failed: ") + infoLog);
+        LOGNOW(LOG_LEVEL::ERROR, string("Vertex Shader Compilation Failed: ") + infoLog);
       }
 
-      LOG(LOG_LEVEL::INFO, current_time(), "Compiled Vertex Shaders");
+      LOGNOW(LOG_LEVEL::INFO, "Compiled Vertex Shaders");
 
       unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
       glShaderSource(fragmentShader, 1, &fragShaderSrc, NULL);
@@ -145,10 +146,10 @@ class Shader {
       glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
       if(!success) {
         glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-        LOG(LOG_LEVEL::ERROR, current_time(), string("Failed to compile Fragment Shader: ") + infoLog);
+        LOGNOW(LOG_LEVEL::ERROR, string("Failed to compile Fragment Shader: ") + infoLog);
       }
 
-      LOG(LOG_LEVEL::INFO, current_time(), "Fragment Shader Successfully Compiled");
+      LOGNOW(LOG_LEVEL::INFO, "Fragment Shader Successfully Compiled");
 
       shaderProgram = glCreateProgram();
       glAttachShader(shaderProgram, vertexShader);
@@ -159,7 +160,7 @@ class Shader {
       glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
       if (!success) {
         glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-        LOG(LOG_LEVEL::ERROR, current_time(), string("Shader Linking Failed: ") + infoLog);
+        LOGNOW(LOG_LEVEL::ERROR, string("Shader Linking Failed: ") + infoLog);
       }
 
       // Clean up the individual shader objects (we don't need them once linked)
@@ -170,7 +171,7 @@ class Shader {
 
     ~Shader () {
       glDeleteProgram(shaderProgram);
-      LOG(LOG_LEVEL::DEBUG, current_time(), "Shader deleted");
+      LOGNOW(LOG_LEVEL::DEBUG, "Shader deleted");
     }
 
     Shader(const Shader&) = delete;
@@ -184,10 +185,10 @@ class Shader {
 
 
 int main () {
-  LOG(LOG_LEVEL::INFO, current_time(), "PROGRAM EXECUTION STARTED");
+  LOGNOW(LOG_LEVEL::INFO, "PROGRAM EXECUTION STARTED");
 
   if (!glfwInit()) {
-    LOG(LOG_LEVEL::ERROR, current_time(), "COULD NOT INITIALIZE GLFW");
+    LOGNOW(LOG_LEVEL::ERROR, "COULD NOT INITIALIZE GLFW");
   }
 
   // Set OpenGL versions(3.3 in this case)
@@ -197,7 +198,7 @@ int main () {
 
   GLFWwindow *window = glfwCreateWindow(800, 600, "Test Title", NULL, NULL); // Create Window
   if (window == NULL) {
-    LOG(LOG_LEVEL::ERROR, current_time(), "Failed to create a window");
+    LOGNOW(LOG_LEVEL::ERROR, "Failed to create a window");
     glfwTerminate();
     return -1;
   }
@@ -205,11 +206,11 @@ int main () {
   glfwMakeContextCurrent(window); // Apply OpenGL commands from this program to this window specifically
 
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-    LOG(LOG_LEVEL::ERROR, current_time(), "Failed to create GLAD process");
+    LOGNOW(LOG_LEVEL::ERROR, "Failed to create GLAD process");
     return -1;
   }
 
-  LOG(LOG_LEVEL::INFO, current_time(), "GLAD started");
+  LOGNOW(LOG_LEVEL::INFO, "GLAD started");
 
   glViewport(0, 0, 800, 600); // Set viewport in that window, first two: offset + other two: dimensions
 
@@ -244,7 +245,7 @@ int main () {
   Shader shader(vertexShaderSrc, fragShaderSrc);
   TriangleMesh triangle_mesh(vertices, sizeof(vertices));
 
-  LOG(LOG_LEVEL::INFO, current_time(), "Shaders successfully attached");
+  LOGNOW(LOG_LEVEL::INFO, "Shaders successfully attached");
 
   while(!glfwWindowShouldClose(window)) { // While the OS doesn't signals to close the window this is essentially just a while(true) loop
     processInput(window);
