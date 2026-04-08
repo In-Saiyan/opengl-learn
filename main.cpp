@@ -13,8 +13,8 @@ using LocalTime = std::chrono::local_time<std::chrono::system_clock::duration>;
  * Environment ENUM 
  */
 enum class Environment {
-    DEVELOPMENT,
-    PRODUCTION
+  DEVELOPMENT,
+  PRODUCTION
 };
 
 // ENV variables are for the weak, Keep all my variables in the code...
@@ -59,9 +59,76 @@ LocalTime current_time () {
 }
 
 void processInput(GLFWwindow *window) {
-    if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, true);
+  if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    glfwSetWindowShouldClose(window, true);
 }
+
+class Shader {
+  private: 
+    unsigned int shaderProgram;
+
+  public:
+    Shader(const char* vertexShaderSrc, const char* fragShaderSrc) {
+      unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+      glShaderSource(vertexShader, 1, &vertexShaderSrc, NULL);
+      glCompileShader(vertexShader);
+
+      int success;
+      char infoLog[512];
+
+      glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+
+      if (!success) {
+        glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+        LOG(LOG_LEVEL::ERROR, current_time(), string("Vertex Shader Compilation Failed: ") + infoLog);
+      }
+
+      LOG(LOG_LEVEL::INFO, current_time(), "Compiled Vertex Shaders");
+
+      unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+      glShaderSource(fragmentShader, 1, &fragShaderSrc, NULL);
+      glCompileShader(fragmentShader);
+
+      glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+      if(!success) {
+        glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+        LOG(LOG_LEVEL::ERROR, current_time(), string("Failed to compile Fragment Shader: ") + infoLog);
+      }
+
+      LOG(LOG_LEVEL::INFO, current_time(), "Fragment Shader Successfully Compiled");
+
+      shaderProgram = glCreateProgram();
+      glAttachShader(shaderProgram, vertexShader);
+      glAttachShader(shaderProgram, fragmentShader);
+      glLinkProgram(shaderProgram);
+
+      // Check for linking errors
+      glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
+      if (!success) {
+        glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
+        LOG(LOG_LEVEL::ERROR, current_time(), string("Shader Linking Failed: ") + infoLog);
+      }
+
+      // Clean up the individual shader objects (we don't need them once linked)
+      glDeleteShader(vertexShader);
+      glDeleteShader(fragmentShader);
+
+    }
+
+    ~Shader () {
+      glDeleteProgram(shaderProgram);
+      LOG(LOG_LEVEL::DEBUG, current_time(), "Shader deleted");
+    }
+
+    Shader(const Shader&) = delete;
+    Shader& operator=(const Shader&) = delete;
+
+    void activate () const {
+      glUseProgram(shaderProgram);
+    }
+};
+
+
 
 int main () {
   LOG(LOG_LEVEL::INFO, current_time(), "PROGRAM EXECUTION STARTED");
@@ -92,7 +159,7 @@ int main () {
   LOG(LOG_LEVEL::INFO, current_time(), "GLAD started");
 
   glViewport(0, 0, 800, 600); // Set viewport in that window, first two: offset + other two: dimensions
-  
+
   // VBO(Vertex Buffer Object) is like an object that holds data
   // VAO(Vertex Array Object) is the rule manual that tells GPU how to read the VBO
   unsigned int VBO, VAO; // IDs for objects below
@@ -100,12 +167,12 @@ int main () {
   glGenBuffers(1, &VBO);
 
   glBindVertexArray(VAO); // Bind the VAO first - telling OpenGL start recording the setup instructions...
-  
+
   float vertices[] = { 
     // Positions         // Colors (R, G, B)
     -0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  // Bottom Left (Red)
-     0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // Bottom Right (Green)
-     0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // Top (Blue)
+    0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  // Bottom Right (Green)
+    0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f   // Top (Blue)
   };
 
   // Bind the VBO and push the vertex data onto GPU vram
@@ -151,49 +218,38 @@ int main () {
                                  FragColor = vec4(ourColor, 1.0f);\n\
                                }\n\0";
 
+  // unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+  // glShaderSource(vertexShader, 1, &vertexShaderSrc, NULL);
+  // glCompileShader(vertexShader);
+  //
+  // int success;
+  // char infoLog[512];
+  //
+  // glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
+  //
+  // if (!success) {
+  //   glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+  //   LOG(LOG_LEVEL::ERROR, current_time(), string("Vertex Shader Compilation Failed: ") + infoLog);
+  // }
+  //
+  // LOG(LOG_LEVEL::INFO, current_time(), "Compiled Vertex Shaders");
+  //
+  // unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+  // glShaderSource(fragmentShader, 1, &fragShaderSrc, NULL);
+  // glCompileShader(fragmentShader);
+  //
+  // glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
+  // if(!success) {
+  //   glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+  //   LOG(LOG_LEVEL::ERROR, current_time(), string("Failed to compile Fragment Shader: ") + infoLog);
+  // }
+  //
+  // LOG(LOG_LEVEL::INFO, current_time(), "Fragment Shader Successfully Compiled");
+
   unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, &vertexShaderSrc, NULL);
-  glCompileShader(vertexShader);
-
-  int success;
-  char infoLog[512];
-
-  glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &success);
-
-  if (!success) {
-    glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
-    LOG(LOG_LEVEL::ERROR, current_time(), string("Vertex Shader Compilation Failed: ") + infoLog);
-  }
-
-  LOG(LOG_LEVEL::INFO, current_time(), "Compiled Vertex Shaders");
-
   unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, &fragShaderSrc, NULL);
-  glCompileShader(fragmentShader);
 
-  glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
-  if(!success) {
-    glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
-    LOG(LOG_LEVEL::ERROR, current_time(), string("Failed to compile Fragment Shader: ") + infoLog);
-  }
-
-  LOG(LOG_LEVEL::INFO, current_time(), "Fragment Shader Successfully Compiled");
-
-  unsigned int shaderProgram = glCreateProgram();
-  glAttachShader(shaderProgram, vertexShader);
-  glAttachShader(shaderProgram, fragmentShader);
-  glLinkProgram(shaderProgram);
-
-  // Check for linking errors
-  glGetProgramiv(shaderProgram, GL_LINK_STATUS, &success);
-  if (!success) {
-    glGetProgramInfoLog(shaderProgram, 512, NULL, infoLog);
-    LOG(LOG_LEVEL::ERROR, current_time(), string("Shader Linking Failed: ") + infoLog);
-  }
-
-  // Clean up the individual shader objects (we don't need them once linked)
-  glDeleteShader(vertexShader);
-  glDeleteShader(fragmentShader);
+  Shader shader(vertexShaderSrc, fragShaderSrc);
 
   LOG(LOG_LEVEL::INFO, current_time(), "Shaders successfully attached");
 
@@ -203,7 +259,7 @@ int main () {
     glClear(GL_COLOR_BUFFER_BIT); // Only clear the color? Need some clarification.
 
     // Activate our shader program
-    glUseProgram(shaderProgram);
+    shader.activate();
     // Bind our VAO (the instruction manual for our triangle)
     glBindVertexArray(VAO);
     // DRAW!
