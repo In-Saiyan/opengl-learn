@@ -1,0 +1,29 @@
+# ==========================================================
+# 1. Core Rule: Ignore anything without an extension
+# ==========================================================
+# Ignore absolutely everything first
+*
+# Un-ignore all directories (so Git can find the files inside them)
+!*/
+# Un-ignore all files that have a dot/extension (like .cpp, .h, .c, .txt)
+!*.*
+
+# ==========================================================
+# 2. Exceptions to the Rule
+# ==========================================================
+# We explicitly want to keep the Makefile even though it has no extension!
+!Makefile
+
+# ==========================================================
+# 3. Standard C++ / Arch Linux Ignores
+# ==========================================================
+# Even though these have extensions, we don't want them in the repo
+*.o
+*.out
+*.log
+*.tar.gz
+*.zip
+
+# Editor / OS files
+.cache/
+compile_commands.json
